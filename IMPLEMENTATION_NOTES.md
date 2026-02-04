@@ -203,10 +203,11 @@ Sync Operation:
 ## Technical Decisions
 
 ### 1. Dictionary for Deduplication
-Used `Dictionary of [Text[500], Integer]` to track unique job keys efficiently:
+Used `Dictionary of [Text[1024], Integer]` to track unique job keys efficiently:
 - Key: "ObjectType|ObjectID|ParameterString"
 - Value: Template Entry No.
 - Enables O(1) lookup for duplicate detection
+- Buffer size of 1024 ensures no truncation (Parameter String max 250 + format strings)
 
 ### 2. Temporary Table for Comparison
 Used temporary Job Queue Entry table to store first occurrence:
