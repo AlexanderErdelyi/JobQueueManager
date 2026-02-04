@@ -34,11 +34,28 @@ page 52000 "JQM Job Queue Manager"
     {
         area(Processing)
         {
+            action(OpenTemplates)
+            {
+                ApplicationArea = All;
+                Caption = 'Job Queue Templates';
+                ToolTip = 'Open the job queue templates.';
+                Image = Template;
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedIsBig = true;
+
+                trigger OnAction()
+                var
+                    JobQueueTemplatesPage: Page "JQM Job Queue Templates";
+                begin
+                    JobQueueTemplatesPage.Run();
+                end;
+            }
             action(PopulateExisting)
             {
                 ApplicationArea = All;
-                Caption = 'Populate Existing Job Queues';
-                ToolTip = 'Populate existing job queue entries from all companies.';
+                Caption = 'Initial Population';
+                ToolTip = 'Populate templates from existing job queue entries in all companies.';
                 Image = Import;
                 Promoted = true;
                 PromotedCategory = Process;
@@ -48,7 +65,8 @@ page 52000 "JQM Job Queue Manager"
                 var
                     JobQueueMgr: Codeunit "JQM Job Queue Manager";
                 begin
-                    JobQueueMgr.PopulateExistingJobQueues();
+                    if Confirm('This will scan all companies and populate templates. Continue?') then
+                        JobQueueMgr.PopulateTemplatesFromAllCompanies();
                 end;
             }
             action(OpenMappings)

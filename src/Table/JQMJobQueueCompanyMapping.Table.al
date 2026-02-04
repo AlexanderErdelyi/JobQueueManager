@@ -5,11 +5,11 @@ table 52001 "JQM Job Queue Company Mapping"
 
     fields
     {
-        field(1; "Job Queue Entry ID"; Guid)
+        field(1; "Template Entry No."; Integer)
         {
             DataClassification = CustomerContent;
-            Caption = 'Job Queue Entry ID';
-            TableRelation = "Job Queue Entry".SystemId;
+            Caption = 'Template Entry No.';
+            TableRelation = "JQM Job Queue Template"."Entry No.";
         }
         field(2; "Company Name"; Text[30])
         {
@@ -34,6 +34,11 @@ table 52001 "JQM Job Queue Company Mapping"
             DataClassification = CustomerContent;
             Caption = 'Target Job Queue Entry ID';
         }
+        field(6; "Source Job Queue Entry ID"; Guid)
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Source Job Queue Entry ID';
+        }
         field(10; "Object Type to Run"; Option)
         {
             DataClassification = CustomerContent;
@@ -50,7 +55,7 @@ table 52001 "JQM Job Queue Company Mapping"
 
     keys
     {
-        key(PK; "Job Queue Entry ID", "Company Name")
+        key(PK; "Template Entry No.", "Company Name")
         {
             Clustered = true;
         }
