@@ -1,0 +1,17 @@
+# AL Build artifacts
+*.app
+.alpackages/
+.snapshots/
+rad.json
+
+# Visual Studio Code
+.vscode/*
+!.vscode/launch.json
+.vs/
+
+# AL Compiler Output
+*.g.xlf
+
+# System files
+.DS_Store
+Thumbs.db
