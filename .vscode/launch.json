@@ -1,22 +1,46 @@
 {
   "version": "0.2.0",
-  "configurations": [
+  "configurations": [    
     {
-      "name": "Your own server",
       "type": "al",
       "request": "launch",
-      "server": "http://localhost",
-      "serverInstance": "BC220",
-      "port": 7049,
-      "authentication": "Windows",
+      "name": "launch: BusinessCentralex",
+      "server": "https://cosmo-alpaca.westeurope.cloudapp.azure.com",
+      "serverInstance": "f0d360b8a7f8dev",
+      "port": 443,
+      "authentication": "UserPassword",
+      "environmentType": "OnPrem",
+      "tenant": "default",
       "startupObjectType": "Page",
-      "startupObjectId": 50100,
-      "schemaUpdateMode": "Synchronize",
-      "breakOnError": "All",
-      "breakOnRecordWrite": false,
+      "startupObjectId": 22,
+      "breakOnError": true,
       "launchBrowser": true,
       "enableLongRunningSqlStatements": true,
       "enableSqlInformationDebugger": true
+    },
+    {
+      "type": "al",
+      "request": "attach",
+      "name": "attach: BusinessCentralex",
+      "server": "https://cosmo-alpaca.westeurope.cloudapp.azure.com",
+      "serverInstance": "f0d360b8a7f8dev",
+      "port": 443,
+      "authentication": "UserPassword",
+      "environmentType": "OnPrem",
+      "tenant": "default",
+      "breakOnNext": "WebClient"
+    },
+    {
+      "type": "al",
+      "request": "snapshotInitialize",
+      "name": "snapshotInitialize: BusinessCentralex",
+      "server": "https://cosmo-alpaca.westeurope.cloudapp.azure.com",
+      "serverInstance": "f0d360b8a7f8snap",
+      "port": 443,
+      "authentication": "UserPassword",
+      "environmentType": "OnPrem",
+      "tenant": "default",
+      "breakOnNext": "WebClient"
     }
   ]
 }

@@ -1,10 +1,10 @@
-codeunit 50100 "Job Queue Manager"
+codeunit 52000 "JQM Job Queue Manager"
 {
     procedure CheckJobQueueSync(JobQueueEntryID: Guid): Boolean
     var
         SourceJobQueueEntry: Record "Job Queue Entry";
         TargetJobQueueEntry: Record "Job Queue Entry";
-        JobQueueCompanyMapping: Record "Job Queue Company Mapping";
+        JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
         CompanyInfo: Record Company;
         IsInSync: Boolean;
     begin
@@ -49,7 +49,7 @@ codeunit 50100 "Job Queue Manager"
     var
         SourceJobQueueEntry: Record "Job Queue Entry";
         TargetJobQueueEntry: Record "Job Queue Entry";
-        JobQueueCompanyMapping: Record "Job Queue Company Mapping";
+        JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
         CompanyInfo: Record Company;
     begin
         if not SourceJobQueueEntry.GetBySystemId(JobQueueEntryID) then
@@ -81,7 +81,7 @@ codeunit 50100 "Job Queue Manager"
     procedure PopulateExistingJobQueues()
     var
         JobQueueEntry: Record "Job Queue Entry";
-        JobQueueCompanyMapping: Record "Job Queue Company Mapping";
+        JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
         CompanyInfo: Record Company;
         CurrentCompanyName: Text[30];
     begin

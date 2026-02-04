@@ -1,9 +1,9 @@
-page 50101 "Job Queue Company Mapping"
+page 52001 "JQM Job Queue Company Mapping"
 {
     PageType = List;
     ApplicationArea = All;
     UsageCategory = Lists;
-    SourceTable = "Job Queue Company Mapping";
+    SourceTable = "JQM Job Queue Company Mapping";
     Caption = 'Job Queue Company Mapping';
 
     layout
@@ -62,7 +62,7 @@ page 50101 "Job Queue Company Mapping"
 
                 trigger OnAction()
                 var
-                    JobQueueMgr: Codeunit "Job Queue Manager";
+                    JobQueueMgr: Codeunit "JQM Job Queue Manager";
                     JobQueueEntryID: Guid;
                 begin
                     if Rec."Job Queue Entry ID" <> JobQueueEntryID then begin
@@ -85,7 +85,7 @@ page 50101 "Job Queue Company Mapping"
 
                 trigger OnAction()
                 var
-                    JobQueueMgr: Codeunit "Job Queue Manager";
+                    JobQueueMgr: Codeunit "JQM Job Queue Manager";
                     JobQueueEntryID: Guid;
                 begin
                     if Rec."Job Queue Entry ID" <> JobQueueEntryID then begin

@@ -1,4 +1,4 @@
-table 50101 "Job Queue Company Mapping"
+table 52001 "JQM Job Queue Company Mapping"
 {
     DataClassification = CustomerContent;
     Caption = 'Job Queue Company Mapping';

@@ -1,4 +1,4 @@
-pageextension 50100 "Job Queue Entry Ext" extends "Job Queue Entries"
+pageextension 52000 "JQM Job Queue Entry Ext" extends "Job Queue Entries"
 {
     actions
     {
@@ -15,8 +15,8 @@ pageextension 50100 "Job Queue Entry Ext" extends "Job Queue Entries"
 
                 trigger OnAction()
                 var
-                    JobQueueCompanyMapping: Record "Job Queue Company Mapping";
-                    JobQueueCompanyMappingPage: Page "Job Queue Company Mapping";
+                    JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
+                    JobQueueCompanyMappingPage: Page "JQM Job Queue Company Mapping";
                 begin
                     JobQueueCompanyMapping.SetRange("Job Queue Entry ID", Rec.SystemId);
                     JobQueueCompanyMappingPage.SetTableView(JobQueueCompanyMapping);
@@ -34,7 +34,7 @@ pageextension 50100 "Job Queue Entry Ext" extends "Job Queue Entries"
 
                 trigger OnAction()
                 var
-                    JobQueueCompanyMapping: Record "Job Queue Company Mapping";
+                    JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
                     CompanyInfo: Record Company;
                     CompanyName: Text[30];
                 begin

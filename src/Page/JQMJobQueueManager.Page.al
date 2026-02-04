@@ -1,9 +1,9 @@
-page 50100 "Job Queue Manager"
+page 52000 "JQM Job Queue Manager"
 {
     PageType = Card;
     ApplicationArea = All;
     UsageCategory = Administration;
-    SourceTable = "Job Queue Manager Setup";
+    SourceTable = "JQM Job Queue Manager Setup";
     Caption = 'Job Queue Manager';
     InsertAllowed = false;
     DeleteAllowed = false;
@@ -46,7 +46,7 @@ page 50100 "Job Queue Manager"
 
                 trigger OnAction()
                 var
-                    JobQueueMgr: Codeunit "Job Queue Manager";
+                    JobQueueMgr: Codeunit "JQM Job Queue Manager";
                 begin
                     JobQueueMgr.PopulateExistingJobQueues();
                 end;
@@ -63,7 +63,7 @@ page 50100 "Job Queue Manager"
 
                 trigger OnAction()
                 var
-                    JobQueueCompanyMapping: Page "Job Queue Company Mapping";
+                    JobQueueCompanyMapping: Page "JQM Job Queue Company Mapping";
                 begin
                     JobQueueCompanyMapping.Run();
                 end;

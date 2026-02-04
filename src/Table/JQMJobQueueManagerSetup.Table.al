@@ -1,4 +1,4 @@
-table 50100 "Job Queue Manager Setup"
+table 52000 "JQM Job Queue Manager Setup"
 {
     DataClassification = CustomerContent;
     Caption = 'Job Queue Manager Setup';
