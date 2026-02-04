@@ -12,10 +12,10 @@ page 52001 "JQM Job Queue Company Mapping"
         {
             repeater(Group)
             {
-                field("Job Queue Entry ID"; Rec."Job Queue Entry ID")
+                field("Template Entry No."; Rec."Template Entry No.")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the Job Queue Entry ID.';
+                    ToolTip = 'Specifies the Template Entry No.';
                 }
                 field("Company Name"; Rec."Company Name")
                 {
@@ -63,10 +63,9 @@ page 52001 "JQM Job Queue Company Mapping"
                 trigger OnAction()
                 var
                     JobQueueMgr: Codeunit "JQM Job Queue Manager";
-                    JobQueueEntryID: Guid;
                 begin
-                    if Rec."Job Queue Entry ID" <> JobQueueEntryID then begin
-                        if JobQueueMgr.CheckJobQueueSync(Rec."Job Queue Entry ID") then
+                    if Rec."Template Entry No." <> 0 then begin
+                        if JobQueueMgr.CheckTemplateSync(Rec."Template Entry No.") then
                             Message('All mappings are in sync.')
                         else
                             Message('Some mappings are out of sync. Please review and sync.');
@@ -78,7 +77,7 @@ page 52001 "JQM Job Queue Company Mapping"
             {
                 ApplicationArea = All;
                 Caption = 'Sync to Companies';
-                ToolTip = 'Synchronize the job queue entry to target companies.';
+                ToolTip = 'Synchronize the template to target companies.';
                 Image = Refresh;
                 Promoted = true;
                 PromotedCategory = Process;
@@ -86,11 +85,10 @@ page 52001 "JQM Job Queue Company Mapping"
                 trigger OnAction()
                 var
                     JobQueueMgr: Codeunit "JQM Job Queue Manager";
-                    JobQueueEntryID: Guid;
                 begin
-                    if Rec."Job Queue Entry ID" <> JobQueueEntryID then begin
-                        if Confirm('Do you want to sync this job queue entry to all mapped companies?') then begin
-                            JobQueueMgr.SyncJobQueueToCompanies(Rec."Job Queue Entry ID");
+                    if Rec."Template Entry No." <> 0 then begin
+                        if Confirm('Do you want to sync this template to all mapped companies?') then begin
+                            JobQueueMgr.SyncTemplateToCompanies(Rec."Template Entry No.");
                             CurrPage.Update(false);
                         end;
                     end;

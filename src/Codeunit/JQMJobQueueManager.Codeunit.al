@@ -1,18 +1,134 @@
 codeunit 52000 "JQM Job Queue Manager"
 {
-    procedure CheckJobQueueSync(JobQueueEntryID: Guid): Boolean
+    procedure PopulateTemplatesFromAllCompanies()
     var
-        SourceJobQueueEntry: Record "Job Queue Entry";
+        JobQueueEntry: Record "Job Queue Entry";
+        JobQueueTemplate: Record "JQM Job Queue Template";
+        JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
+        CompanyInfo: Record Company;
+        TempJobQueueEntry: Record "Job Queue Entry" temporary;
+        TemplateEntryNo: Integer;
+        JobKey: Text[1024];
+        JobKeyDict: Dictionary of [Text[1024], Integer];
+        ConfigDifferences: Dictionary of [Integer, Boolean];
+        DifferenceNotes: Dictionary of [Integer, Text[250]];
+        CompanyCount: Integer;
+        TruncatedParamString: Text[250];
+        CurrentNote: Text[250];
+    begin
+        // First pass: collect all unique job definitions
+        if CompanyInfo.FindSet() then
+            repeat
+                JobQueueEntry.ChangeCompany(CompanyInfo.Name);
+                if JobQueueEntry.FindSet() then
+                    repeat
+                        // Create unique key: Object Type + Object ID + Parameter String (truncated consistently)
+                        TruncatedParamString := CopyStr(JobQueueEntry."Parameter String", 1, 250);
+                        JobKey := Format(JobQueueEntry."Object Type to Run") + '|' + 
+                                Format(JobQueueEntry."Object ID to Run") + '|' + 
+                                TruncatedParamString;
+                        
+                        if not JobKeyDict.ContainsKey(JobKey) then begin
+                            // Create new template
+                            JobQueueTemplate.Init();
+                            JobQueueTemplate."Object Type to Run" := JobQueueEntry."Object Type to Run";
+                            JobQueueTemplate."Object ID to Run" := JobQueueEntry."Object ID to Run";
+                            JobQueueTemplate."Parameter String" := TruncatedParamString;
+                            JobQueueTemplate.Description := CopyStr(JobQueueEntry.Description, 1, 250);
+                            JobQueueTemplate."Recurring Job" := JobQueueEntry."Recurring Job";
+                            JobQueueTemplate."Run on Mondays" := JobQueueEntry."Run on Mondays";
+                            JobQueueTemplate."Run on Tuesdays" := JobQueueEntry."Run on Tuesdays";
+                            JobQueueTemplate."Run on Wednesdays" := JobQueueEntry."Run on Wednesdays";
+                            JobQueueTemplate."Run on Thursdays" := JobQueueEntry."Run on Thursdays";
+                            JobQueueTemplate."Run on Fridays" := JobQueueEntry."Run on Fridays";
+                            JobQueueTemplate."Run on Saturdays" := JobQueueEntry."Run on Saturdays";
+                            JobQueueTemplate."Run on Sundays" := JobQueueEntry."Run on Sundays";
+                            JobQueueTemplate."Starting Time" := JobQueueEntry."Starting Time";
+                            JobQueueTemplate."Ending Time" := JobQueueEntry."Ending Time";
+                            JobQueueTemplate."No. of Minutes between Runs" := JobQueueEntry."No. of Minutes between Runs";
+                            JobQueueTemplate.Insert(true);
+                            
+                            JobKeyDict.Add(JobKey, JobQueueTemplate."Entry No.");
+                            ConfigDifferences.Add(JobQueueTemplate."Entry No.", false);
+                            DifferenceNotes.Add(JobQueueTemplate."Entry No.", '');
+                            
+                            // Store first occurrence in temp table for comparison
+                            TempJobQueueEntry.TransferFields(JobQueueEntry, false);
+                            TempJobQueueEntry."Entry No." := JobQueueTemplate."Entry No.";
+                            TempJobQueueEntry.Insert();
+                        end else begin
+                            // Template already exists, check for configuration differences
+                            TemplateEntryNo := JobKeyDict.Get(JobKey);
+                            if TempJobQueueEntry.Get(TemplateEntryNo) then begin
+                                if not CompareJobQueueSettings(TempJobQueueEntry, JobQueueEntry) then begin
+                                    ConfigDifferences.Set(TemplateEntryNo, true);
+                                    // Append to existing note instead of replacing
+                                    if DifferenceNotes.ContainsKey(TemplateEntryNo) then
+                                        CurrentNote := DifferenceNotes.Get(TemplateEntryNo)
+                                    else
+                                        CurrentNote := '';
+                                    
+                                    if CurrentNote <> '' then
+                                        CurrentNote += '; ';
+                                    CurrentNote += CompanyInfo.Name;
+                                    DifferenceNotes.Set(TemplateEntryNo, CopyStr(CurrentNote, 1, 250));
+                                end;
+                            end;
+                        end;
+                        
+                        // Create company mapping
+                        TemplateEntryNo := JobKeyDict.Get(JobKey);
+                        if not JobQueueCompanyMapping.Get(TemplateEntryNo, CompanyInfo.Name) then begin
+                            JobQueueCompanyMapping.Init();
+                            JobQueueCompanyMapping."Template Entry No." := TemplateEntryNo;
+                            JobQueueCompanyMapping."Company Name" := CompanyInfo.Name;
+                            JobQueueCompanyMapping."Source Job Queue Entry ID" := JobQueueEntry.SystemId;
+                            JobQueueCompanyMapping."Target Job Queue Entry ID" := JobQueueEntry.SystemId;
+                            JobQueueCompanyMapping."Object Type to Run" := JobQueueEntry."Object Type to Run";
+                            JobQueueCompanyMapping."Object ID to Run" := JobQueueEntry."Object ID to Run";
+                            // Set correct initial status based on whether config matches template
+                            if TempJobQueueEntry.Get(TemplateEntryNo) then begin
+                                if CompareJobQueueSettings(TempJobQueueEntry, JobQueueEntry) then
+                                    JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::Synced
+                                else
+                                    JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Out of Sync";
+                            end else
+                                JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Not Created";
+                            JobQueueCompanyMapping.Insert();
+                        end;
+                    until JobQueueEntry.Next() = 0;
+            until CompanyInfo.Next() = 0;
+        
+        // Update templates with configuration difference flags
+        if JobQueueTemplate.FindSet() then
+            repeat
+                if ConfigDifferences.ContainsKey(JobQueueTemplate."Entry No.") then begin
+                    JobQueueTemplate."Has Configuration Differences" := ConfigDifferences.Get(JobQueueTemplate."Entry No.");
+                    if DifferenceNotes.ContainsKey(JobQueueTemplate."Entry No.") and 
+                       (DifferenceNotes.Get(JobQueueTemplate."Entry No.") <> '') then
+                        JobQueueTemplate."Configuration Difference Note" := 
+                            'Differences in: ' + DifferenceNotes.Get(JobQueueTemplate."Entry No.");
+                    JobQueueTemplate.Modify();
+                end;
+            until JobQueueTemplate.Next() = 0;
+        
+        CompanyCount := CompanyInfo.Count;
+        Message('Initial population completed. Created %1 templates from %2 companies.', JobKeyDict.Count, CompanyCount);
+    end;
+
+    procedure CheckTemplateSync(TemplateEntryNo: Integer): Boolean
+    var
+        SourceTemplate: Record "JQM Job Queue Template";
         TargetJobQueueEntry: Record "Job Queue Entry";
         JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
         CompanyInfo: Record Company;
         IsInSync: Boolean;
     begin
-        if not SourceJobQueueEntry.GetBySystemId(JobQueueEntryID) then
+        if not SourceTemplate.Get(TemplateEntryNo) then
             exit(false);
 
         IsInSync := true;
-        JobQueueCompanyMapping.SetRange("Job Queue Entry ID", JobQueueEntryID);
+        JobQueueCompanyMapping.SetRange("Template Entry No.", TemplateEntryNo);
         if JobQueueCompanyMapping.FindSet() then
             repeat
                 if CompanyInfo.Get(JobQueueCompanyMapping."Company Name") then begin
@@ -24,7 +140,7 @@ codeunit 52000 "JQM Job Queue Manager"
                         IsInSync := false;
                     end else begin
                         if TargetJobQueueEntry.GetBySystemId(JobQueueCompanyMapping."Target Job Queue Entry ID") then begin
-                            if not CompareJobQueueEntries(SourceJobQueueEntry, TargetJobQueueEntry) then begin
+                            if not CompareTemplateWithJobQueue(SourceTemplate, TargetJobQueueEntry) then begin
                                 JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Out of Sync";
                                 JobQueueCompanyMapping.Modify();
                                 IsInSync := false;
@@ -45,17 +161,18 @@ codeunit 52000 "JQM Job Queue Manager"
         exit(IsInSync);
     end;
 
-    procedure SyncJobQueueToCompanies(JobQueueEntryID: Guid)
+    procedure SyncTemplateToCompanies(TemplateEntryNo: Integer)
     var
-        SourceJobQueueEntry: Record "Job Queue Entry";
+        SourceTemplate: Record "JQM Job Queue Template";
         TargetJobQueueEntry: Record "Job Queue Entry";
         JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
         CompanyInfo: Record Company;
+        SyncCount: Integer;
     begin
-        if not SourceJobQueueEntry.GetBySystemId(JobQueueEntryID) then
-            Error('Source Job Queue Entry not found.');
+        if not SourceTemplate.Get(TemplateEntryNo) then
+            Error('Template not found.');
 
-        JobQueueCompanyMapping.SetRange("Job Queue Entry ID", JobQueueEntryID);
+        JobQueueCompanyMapping.SetRange("Template Entry No.", TemplateEntryNo);
         if JobQueueCompanyMapping.FindSet() then
             repeat
                 if CompanyInfo.Get(JobQueueCompanyMapping."Company Name") then begin
@@ -66,76 +183,96 @@ codeunit 52000 "JQM Job Queue Manager"
                             TargetJobQueueEntry.Delete();
                     end;
 
-                    CopyJobQueueEntry(SourceJobQueueEntry, TargetJobQueueEntry, JobQueueCompanyMapping."Company Name");
+                    CopyTemplateToJobQueue(SourceTemplate, TargetJobQueueEntry, JobQueueCompanyMapping."Company Name");
                     
                     JobQueueCompanyMapping."Target Job Queue Entry ID" := TargetJobQueueEntry.SystemId;
                     JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::Synced;
                     JobQueueCompanyMapping."Last Sync Date Time" := CurrentDateTime;
                     JobQueueCompanyMapping.Modify();
+                    
+                    SyncCount += 1;
                 end;
             until JobQueueCompanyMapping.Next() = 0;
 
-        Message('Job Queue Entry has been synced to %1 companies.', JobQueueCompanyMapping.Count);
+        Message('Template has been synced to %1 companies.', SyncCount);
     end;
 
-    procedure PopulateExistingJobQueues()
-    var
-        JobQueueEntry: Record "Job Queue Entry";
-        JobQueueCompanyMapping: Record "JQM Job Queue Company Mapping";
-        CompanyInfo: Record Company;
-        CurrentCompanyName: Text[30];
-    begin
-        CurrentCompanyName := CopyStr(CompanyName, 1, 30);
-        
-        if CompanyInfo.FindSet() then
-            repeat
-                if CompanyInfo.Name <> CurrentCompanyName then begin
-                    JobQueueEntry.ChangeCompany(CompanyInfo.Name);
-                    if JobQueueEntry.FindSet() then
-                        repeat
-                            if not JobQueueCompanyMapping.Get(JobQueueEntry.SystemId, CompanyInfo.Name) then begin
-                                JobQueueCompanyMapping.Init();
-                                JobQueueCompanyMapping."Job Queue Entry ID" := JobQueueEntry.SystemId;
-                                JobQueueCompanyMapping."Company Name" := CompanyInfo.Name;
-                                JobQueueCompanyMapping."Target Job Queue Entry ID" := JobQueueEntry.SystemId;
-                                JobQueueCompanyMapping."Object Type to Run" := JobQueueEntry."Object Type to Run";
-                                JobQueueCompanyMapping."Object ID to Run" := JobQueueEntry."Object ID to Run";
-                                JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Not Created";
-                                JobQueueCompanyMapping.Insert();
-                            end;
-                        until JobQueueEntry.Next() = 0;
-                end;
-            until CompanyInfo.Next() = 0;
-
-        Message('Existing Job Queue Entries have been populated.');
-    end;
-
-    local procedure CompareJobQueueEntries(SourceEntry: Record "Job Queue Entry"; TargetEntry: Record "Job Queue Entry"): Boolean
+    local procedure CompareJobQueueSettings(Entry1: Record "Job Queue Entry"; Entry2: Record "Job Queue Entry"): Boolean
     begin
         exit(
-            (SourceEntry."Object Type to Run" = TargetEntry."Object Type to Run") and
-            (SourceEntry."Object ID to Run" = TargetEntry."Object ID to Run") and
-            (SourceEntry."Recurring Job" = TargetEntry."Recurring Job") and
-            (SourceEntry."Run on Mondays" = TargetEntry."Run on Mondays") and
-            (SourceEntry."Run on Tuesdays" = TargetEntry."Run on Tuesdays") and
-            (SourceEntry."Run on Wednesdays" = TargetEntry."Run on Wednesdays") and
-            (SourceEntry."Run on Thursdays" = TargetEntry."Run on Thursdays") and
-            (SourceEntry."Run on Fridays" = TargetEntry."Run on Fridays") and
-            (SourceEntry."Run on Saturdays" = TargetEntry."Run on Saturdays") and
-            (SourceEntry."Run on Sundays" = TargetEntry."Run on Sundays") and
-            (SourceEntry."Starting Time" = TargetEntry."Starting Time") and
-            (SourceEntry."Ending Time" = TargetEntry."Ending Time") and
-            (SourceEntry."No. of Minutes between Runs" = TargetEntry."No. of Minutes between Runs")
+            (Entry1."Recurring Job" = Entry2."Recurring Job") and
+            (Entry1."Run on Mondays" = Entry2."Run on Mondays") and
+            (Entry1."Run on Tuesdays" = Entry2."Run on Tuesdays") and
+            (Entry1."Run on Wednesdays" = Entry2."Run on Wednesdays") and
+            (Entry1."Run on Thursdays" = Entry2."Run on Thursdays") and
+            (Entry1."Run on Fridays" = Entry2."Run on Fridays") and
+            (Entry1."Run on Saturdays" = Entry2."Run on Saturdays") and
+            (Entry1."Run on Sundays" = Entry2."Run on Sundays") and
+            (Entry1."Starting Time" = Entry2."Starting Time") and
+            (Entry1."Ending Time" = Entry2."Ending Time") and
+            (Entry1."No. of Minutes between Runs" = Entry2."No. of Minutes between Runs")
         );
     end;
 
-    local procedure CopyJobQueueEntry(SourceEntry: Record "Job Queue Entry"; var TargetEntry: Record "Job Queue Entry"; CompanyName: Text[30])
+    local procedure CompareTemplateWithJobQueue(Template: Record "JQM Job Queue Template"; JobQueue: Record "Job Queue Entry"): Boolean
+    begin
+        exit(
+            (Template."Object Type to Run" = JobQueue."Object Type to Run") and
+            (Template."Object ID to Run" = JobQueue."Object ID to Run") and
+            (Template."Recurring Job" = JobQueue."Recurring Job") and
+            (Template."Run on Mondays" = JobQueue."Run on Mondays") and
+            (Template."Run on Tuesdays" = JobQueue."Run on Tuesdays") and
+            (Template."Run on Wednesdays" = JobQueue."Run on Wednesdays") and
+            (Template."Run on Thursdays" = JobQueue."Run on Thursdays") and
+            (Template."Run on Fridays" = JobQueue."Run on Fridays") and
+            (Template."Run on Saturdays" = JobQueue."Run on Saturdays") and
+            (Template."Run on Sundays" = JobQueue."Run on Sundays") and
+            (Template."Starting Time" = JobQueue."Starting Time") and
+            (Template."Ending Time" = JobQueue."Ending Time") and
+            (Template."No. of Minutes between Runs" = JobQueue."No. of Minutes between Runs")
+        );
+    end;
+
+    local procedure CopyTemplateToJobQueue(Template: Record "JQM Job Queue Template"; var TargetEntry: Record "Job Queue Entry"; CompanyName: Text[30])
     begin
         TargetEntry.ChangeCompany(CompanyName);
         TargetEntry.Init();
-        TargetEntry.TransferFields(SourceEntry, false);
+        TargetEntry."Object Type to Run" := Template."Object Type to Run";
+        TargetEntry."Object ID to Run" := Template."Object ID to Run";
+        TargetEntry."Parameter String" := Template."Parameter String";
+        TargetEntry.Description := Template.Description;
+        TargetEntry."Recurring Job" := Template."Recurring Job";
+        TargetEntry."Run on Mondays" := Template."Run on Mondays";
+        TargetEntry."Run on Tuesdays" := Template."Run on Tuesdays";
+        TargetEntry."Run on Wednesdays" := Template."Run on Wednesdays";
+        TargetEntry."Run on Thursdays" := Template."Run on Thursdays";
+        TargetEntry."Run on Fridays" := Template."Run on Fridays";
+        TargetEntry."Run on Saturdays" := Template."Run on Saturdays";
+        TargetEntry."Run on Sundays" := Template."Run on Sundays";
+        TargetEntry."Starting Time" := Template."Starting Time";
+        TargetEntry."Ending Time" := Template."Ending Time";
+        TargetEntry."No. of Minutes between Runs" := Template."No. of Minutes between Runs";
         TargetEntry."User ID" := UserId;
         TargetEntry.Status := TargetEntry.Status::"On Hold";
         TargetEntry.Insert(true);
+    end;
+
+    // Legacy methods for backward compatibility
+    procedure CheckJobQueueSync(JobQueueEntryID: Guid): Boolean
+    begin
+        // This is a legacy method - redirect to template-based method if needed
+        Error('This method is deprecated. Please use CheckTemplateSync instead.');
+    end;
+
+    procedure SyncJobQueueToCompanies(JobQueueEntryID: Guid)
+    begin
+        // This is a legacy method - redirect to template-based method if needed
+        Error('This method is deprecated. Please use SyncTemplateToCompanies instead.');
+    end;
+
+    procedure PopulateExistingJobQueues()
+    begin
+        // This is a legacy method - redirect to new method
+        PopulateTemplatesFromAllCompanies();
     end;
 }
