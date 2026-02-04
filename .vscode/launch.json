@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Your own server",
+      "type": "al",
+      "request": "launch",
+      "server": "http://localhost",
+      "serverInstance": "BC220",
+      "port": 7049,
+      "authentication": "Windows",
+      "startupObjectType": "Page",
+      "startupObjectId": 50100,
+      "schemaUpdateMode": "Synchronize",
+      "breakOnError": "All",
+      "breakOnRecordWrite": false,
+      "launchBrowser": true,
+      "enableLongRunningSqlStatements": true,
+      "enableSqlInformationDebugger": true
+    }
+  ]
+}
