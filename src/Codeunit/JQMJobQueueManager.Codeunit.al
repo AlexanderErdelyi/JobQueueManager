@@ -8,11 +8,13 @@ codeunit 52000 "JQM Job Queue Manager"
         CompanyInfo: Record Company;
         TempJobQueueEntry: Record "Job Queue Entry" temporary;
         TemplateEntryNo: Integer;
-        JobKey: Text[500];
-        JobKeyDict: Dictionary of [Text[500], Integer];
+        JobKey: Text[1024];
+        JobKeyDict: Dictionary of [Text[1024], Integer];
         ConfigDifferences: Dictionary of [Integer, Boolean];
         DifferenceNotes: Dictionary of [Integer, Text[250]];
         CompanyCount: Integer;
+        TruncatedParamString: Text[250];
+        CurrentNote: Text[250];
     begin
         // First pass: collect all unique job definitions
         if CompanyInfo.FindSet() then
@@ -20,17 +22,18 @@ codeunit 52000 "JQM Job Queue Manager"
                 JobQueueEntry.ChangeCompany(CompanyInfo.Name);
                 if JobQueueEntry.FindSet() then
                     repeat
-                        // Create unique key: Object Type + Object ID + Parameter String
+                        // Create unique key: Object Type + Object ID + Parameter String (truncated consistently)
+                        TruncatedParamString := CopyStr(JobQueueEntry."Parameter String", 1, 250);
                         JobKey := Format(JobQueueEntry."Object Type to Run") + '|' + 
                                 Format(JobQueueEntry."Object ID to Run") + '|' + 
-                                JobQueueEntry."Parameter String";
+                                TruncatedParamString;
                         
                         if not JobKeyDict.ContainsKey(JobKey) then begin
                             // Create new template
                             JobQueueTemplate.Init();
                             JobQueueTemplate."Object Type to Run" := JobQueueEntry."Object Type to Run";
                             JobQueueTemplate."Object ID to Run" := JobQueueEntry."Object ID to Run";
-                            JobQueueTemplate."Parameter String" := CopyStr(JobQueueEntry."Parameter String", 1, 250);
+                            JobQueueTemplate."Parameter String" := TruncatedParamString;
                             JobQueueTemplate.Description := CopyStr(JobQueueEntry.Description, 1, 250);
                             JobQueueTemplate."Recurring Job" := JobQueueEntry."Recurring Job";
                             JobQueueTemplate."Run on Mondays" := JobQueueEntry."Run on Mondays";
@@ -59,8 +62,16 @@ codeunit 52000 "JQM Job Queue Manager"
                             if TempJobQueueEntry.Get(TemplateEntryNo) then begin
                                 if not CompareJobQueueSettings(TempJobQueueEntry, JobQueueEntry) then begin
                                     ConfigDifferences.Set(TemplateEntryNo, true);
-                                    DifferenceNotes.Set(TemplateEntryNo, 
-                                        BuildDifferenceNote(TempJobQueueEntry, JobQueueEntry, CompanyInfo.Name));
+                                    // Append to existing note instead of replacing
+                                    if DifferenceNotes.ContainsKey(TemplateEntryNo) then
+                                        CurrentNote := DifferenceNotes.Get(TemplateEntryNo)
+                                    else
+                                        CurrentNote := '';
+                                    
+                                    if CurrentNote <> '' then
+                                        CurrentNote += '; ';
+                                    CurrentNote += CompanyInfo.Name;
+                                    DifferenceNotes.Set(TemplateEntryNo, CopyStr(CurrentNote, 1, 250));
                                 end;
                             end;
                         end;
@@ -75,7 +86,14 @@ codeunit 52000 "JQM Job Queue Manager"
                             JobQueueCompanyMapping."Target Job Queue Entry ID" := JobQueueEntry.SystemId;
                             JobQueueCompanyMapping."Object Type to Run" := JobQueueEntry."Object Type to Run";
                             JobQueueCompanyMapping."Object ID to Run" := JobQueueEntry."Object ID to Run";
-                            JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Not Created";
+                            // Set correct initial status based on whether config matches template
+                            if TempJobQueueEntry.Get(TemplateEntryNo) then begin
+                                if CompareJobQueueSettings(TempJobQueueEntry, JobQueueEntry) then
+                                    JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::Synced
+                                else
+                                    JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Out of Sync";
+                            end else
+                                JobQueueCompanyMapping."Sync Status" := JobQueueCompanyMapping."Sync Status"::"Not Created";
                             JobQueueCompanyMapping.Insert();
                         end;
                     until JobQueueEntry.Next() = 0;
@@ -86,8 +104,10 @@ codeunit 52000 "JQM Job Queue Manager"
             repeat
                 if ConfigDifferences.ContainsKey(JobQueueTemplate."Entry No.") then begin
                     JobQueueTemplate."Has Configuration Differences" := ConfigDifferences.Get(JobQueueTemplate."Entry No.");
-                    if DifferenceNotes.ContainsKey(JobQueueTemplate."Entry No.") then
-                        JobQueueTemplate."Configuration Difference Note" := DifferenceNotes.Get(JobQueueTemplate."Entry No.");
+                    if DifferenceNotes.ContainsKey(JobQueueTemplate."Entry No.") and 
+                       (DifferenceNotes.Get(JobQueueTemplate."Entry No.") <> '') then
+                        JobQueueTemplate."Configuration Difference Note" := 
+                            'Differences in: ' + DifferenceNotes.Get(JobQueueTemplate."Entry No.");
                     JobQueueTemplate.Modify();
                 end;
             until JobQueueTemplate.Next() = 0;
@@ -211,35 +231,6 @@ codeunit 52000 "JQM Job Queue Manager"
             (Template."Ending Time" = JobQueue."Ending Time") and
             (Template."No. of Minutes between Runs" = JobQueue."No. of Minutes between Runs")
         );
-    end;
-
-    local procedure BuildDifferenceNote(Entry1: Record "Job Queue Entry"; Entry2: Record "Job Queue Entry"; CompanyName: Text[30]): Text[250]
-    var
-        Note: Text[250];
-    begin
-        Note := 'Different in ' + CompanyName + ': ';
-        
-        if Entry1."Recurring Job" <> Entry2."Recurring Job" then
-            Note += 'Recurring, ';
-        if Entry1."Starting Time" <> Entry2."Starting Time" then
-            Note += 'Start Time, ';
-        if Entry1."Ending Time" <> Entry2."Ending Time" then
-            Note += 'End Time, ';
-        if Entry1."No. of Minutes between Runs" <> Entry2."No. of Minutes between Runs" then
-            Note += 'Frequency, ';
-        if (Entry1."Run on Mondays" <> Entry2."Run on Mondays") or
-           (Entry1."Run on Tuesdays" <> Entry2."Run on Tuesdays") or
-           (Entry1."Run on Wednesdays" <> Entry2."Run on Wednesdays") or
-           (Entry1."Run on Thursdays" <> Entry2."Run on Thursdays") or
-           (Entry1."Run on Fridays" <> Entry2."Run on Fridays") or
-           (Entry1."Run on Saturdays" <> Entry2."Run on Saturdays") or
-           (Entry1."Run on Sundays" <> Entry2."Run on Sundays") then
-            Note += 'Run Days, ';
-        
-        if StrLen(Note) > 2 then
-            Note := CopyStr(Note, 1, StrLen(Note) - 2); // Remove trailing comma and space
-        
-        exit(Note);
     end;
 
     local procedure CopyTemplateToJobQueue(Template: Record "JQM Job Queue Template"; var TargetEntry: Record "Job Queue Entry"; CompanyName: Text[30])
