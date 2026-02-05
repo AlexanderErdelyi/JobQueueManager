@@ -18,10 +18,10 @@ table 52002 "JQM Job Queue Template"
         }
         field(3; "Object Type to Run"; Option)
         {
-            DataClassification = CustomerContent;
             Caption = 'Object Type to Run';
-            OptionMembers = " ",Report,Codeunit;
-            OptionCaption = ' ,Report,Codeunit';
+            InitValue = "Report";
+            OptionCaption = ',,,Report,,Codeunit';
+            OptionMembers = ,,,"Report",,"Codeunit";
         }
         field(4; "Object ID to Run"; Integer)
         {

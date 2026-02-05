@@ -43,6 +43,26 @@ page 52001 "JQM Job Queue Company Mapping"
                     ApplicationArea = All;
                     ToolTip = 'Specifies when the last sync occurred.';
                 }
+                field("Allow Recurring Job Exception"; Rec."Allow Recurring Job Exception")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Allow this company to have a different Recurring Job setting than the template.';
+                }
+                field("Allow Weekday Exception"; Rec."Allow Weekday Exception")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Allow this company to run on different weekdays than the template.';
+                }
+                field("Allow Time Exception"; Rec."Allow Time Exception")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Allow this company to have different start/end times than the template.';
+                }
+                field("Allow Minutes Between Exception"; Rec."Allow Minutes Between Exception")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Allow this company to have different minutes between runs than the template.';
+                }
             }
         }
     }

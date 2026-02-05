@@ -56,6 +56,15 @@ page 52002 "JQM Job Queue Templates"
                 }
             }
         }
+        area(FactBoxes)
+        {
+            part(CompanySyncStatus; "JQM Job Queue Company Sync")
+            {
+                ApplicationArea = All;
+                Caption = 'Companies';
+                SubPageLink = "Template Entry No." = field("Entry No.");
+            }
+        }
     }
 
     actions

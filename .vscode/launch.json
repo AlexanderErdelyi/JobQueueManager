@@ -12,11 +12,12 @@
       "environmentType": "OnPrem",
       "tenant": "default",
       "startupObjectType": "Page",
-      "startupObjectId": 22,
+      "startupObjectId": 52002,
       "breakOnError": true,
       "launchBrowser": true,
       "enableLongRunningSqlStatements": true,
-      "enableSqlInformationDebugger": true
+      "enableSqlInformationDebugger": true,
+      "schemaUpdateMode": "ForceSync"
     },
     {
       "type": "al",

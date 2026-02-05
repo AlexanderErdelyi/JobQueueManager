@@ -51,6 +51,26 @@ table 52001 "JQM Job Queue Company Mapping"
             DataClassification = CustomerContent;
             Caption = 'Object ID to Run';
         }
+        field(20; "Allow Recurring Job Exception"; Boolean)
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Allow Recurring Job Exception';
+        }
+        field(21; "Allow Weekday Exception"; Boolean)
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Allow Weekday Exception';
+        }
+        field(22; "Allow Time Exception"; Boolean)
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Allow Time Exception';
+        }
+        field(23; "Allow Minutes Between Exception"; Boolean)
+        {
+            DataClassification = CustomerContent;
+            Caption = 'Allow Minutes Between Runs Exception';
+        }
     }
 
     keys

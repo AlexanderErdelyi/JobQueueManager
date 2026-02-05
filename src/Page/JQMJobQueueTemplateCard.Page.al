@@ -12,7 +12,7 @@ page 52003 "JQM Job Queue Template Card"
             group(General)
             {
                 Caption = 'General';
-                
+
                 field("Entry No."; Rec."Entry No.")
                 {
                     ApplicationArea = All;
@@ -43,7 +43,7 @@ page 52003 "JQM Job Queue Template Card"
             group(Recurrence)
             {
                 Caption = 'Recurrence';
-                
+
                 field("Recurring Job"; Rec."Recurring Job")
                 {
                     ApplicationArea = All;
@@ -103,7 +103,7 @@ page 52003 "JQM Job Queue Template Card"
             group(Status)
             {
                 Caption = 'Status';
-                
+
                 field("No. of Companies"; Rec."No. of Companies")
                 {
                     ApplicationArea = All;
@@ -122,6 +122,28 @@ page 52003 "JQM Job Queue Template Card"
                     ToolTip = 'Specifies details about the configuration differences.';
                     MultiLine = true;
                 }
+            }
+            part(CompanyMappings; "JQM Job Queue Company Mapping")
+            {
+                ApplicationArea = All;
+                Caption = 'Company Mappings';
+                SubPageLink = "Template Entry No." = field("Entry No.");
+                UpdatePropagation = Both;
+            }
+        }
+        area(FactBoxes)
+        {
+            part(CompanySyncStatus; "JQM Job Queue Company Sync")
+            {
+                ApplicationArea = All;
+                Caption = 'Company Sync Status';
+                SubPageLink = "Template Entry No." = field("Entry No.");
+            }
+            part(ConfigDifferences; "JQM Config Differences")
+            {
+                ApplicationArea = All;
+                Caption = 'Configuration Differences';
+                SubPageLink = "Entry No." = field("Entry No.");
             }
         }
     }
